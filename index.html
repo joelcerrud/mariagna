@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para ti, Mariagna</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #a2d2ff; /* Azul cielo brillante */
+            --color-secondary: #ffafcc; /* Rosa suave */
+            --color-accent: #fcf6bd; /* Amarillo pálido, como estrellas */
+            --color-text-dark: #e0e0e0;
+            --color-text-light: #f8f8f8;
+            --color-bg-dark: #1a1a2e; /* Azul noche profundo */
+            --color-bg-medium: #162447;
+            --color-bg-light: #1f4068;
+            --color-card-bg: rgba(22, 36, 71, 0.85); /* Azul más oscuro, translúcido */
+            --color-button: #ffafcc;
+            --color-button-hover: #ff8fab;
+            --color-card-back: #3a506b; /* Un azul más oscuro para la parte trasera de la carta */
+            --color-error-glow: #ff4d4d; /* Rojo para error */
+            --color-match-glow: #a2d2ff; /* Azul para match */
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            margin: 0;
+            background-color: var(--color-bg-dark);
+            color: var(--color-text-dark);
+            line-height: 1.8;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            position: relative; /* For canvas positioning */
+        }
+
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Behind all content */
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90%;
+            max-width: 900px; /* Slightly wider */
+            background-color: var(--color-card-bg);
+            border-radius: 30px; /* Softer curves */
+            box-shadow: 0 0 40px rgba(162, 210, 255, 0.3), 0 0 80px rgba(255, 175, 204, 0.2); /* Softer, glowing shadow */
+            padding: 40px 50px; /* Adjusted padding */
+            box-sizing: border-box;
+            position: relative;
+            margin: 40px auto;
+            border: 1px solid rgba(162, 210, 255, 0.2);
+            z-index: 1; /* Above canvas */
+        }
+        
+        /* Inner decorative border */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 15px; left: 15px; right: 15px; bottom: 15px;
+            border-radius: 20px;
+            border: 2px dashed var(--color-primary);
+            opacity: 0.3;
+            animation: pulseBorder 5s infinite ease-in-out;
+        }
+
+        @keyframes pulseBorder {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
+        section {
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 30px 20px;
+            width: 100%;
+            min-height: 50vh;
+            box-sizing: border-box;
+            opacity: 0; /* Default state for animation */
+            transform: translateY(50px); /* Default state for animation */
+            transition: opacity 1.2s ease-out, transform 1.2s ease-out; /* Smooth transition for section itself */
+        }
+
+        /* Class to truly hide section, applied AFTER fade-out */
+        section.hidden {
+            display: none !important;
+        }
+
+        /* Active class to show and animate section */
+        section.active {
+            display: flex; /* Ensure it takes up space and is visible */
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        h1, h2 {
+            font-family: 'Playfair Display', serif;
+            color: var(--color-primary);
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px var(--color-primary), 0 0 20px rgba(162, 210, 255, 0.5);
+        }
+
+        h1.mensaje-inicial {
+            font-size: 3.5em; /* Adjusted size */
+            font-weight: 700;
+        }
+        
+        p.mensaje-inicial-secundario {
+            font-size: 1.5em;
+            margin-bottom: 40px;
+            color: var(--color-text-light);
+        }
+
+        p {
+            font-size: 1.1em;
+            color: var(--color-text-dark);
+            max-width: 650px;
+            margin: 15px auto;
+        }
+
+        /* Ensures elements inside an active section are initially hidden for staggered animation */
+        section.active > * {
+            opacity: 0;
+        }
+
+
+        #boton-audio-container {
+            margin-top: 30px;
+        }
+
+        #boton-audio {
+            padding: 18px 35px;
+            font-size: 1.3em;
+            font-family: 'Nunito', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--color-button), var(--color-primary));
+            color: #100f30; /* Dark text for light button */
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 8px 20px rgba(255, 175, 204, 0.4);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: 0.03em;
+        }
+
+        #boton-audio:hover {
+            background: linear-gradient(135deg, var(--color-button-hover), var(--color-primary));
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 12px 25px rgba(255, 175, 204, 0.6);
+        }
+        
+        #boton-audio:active {
+            transform: translateY(0px) scale(1);
+        }
+
+        .next-button {
+            background-color: var(--color-secondary);
+            color: #100f30; /* Dark text for light button */
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-family: 'Nunito', sans-serif;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 40px;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        }
+
+        .next-button:hover {
+            background-color: var(--color-button-hover);
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        #agradecimiento h2, #seccion-medicina h2, #juego-memoria h2 {
+            color: var(--color-primary);
+            font-size: 2.5em;
+        }
+        
+        .gratitude-phrase {
+            font-size: 1.25em;
+            font-style: italic;
+            color: var(--color-accent); /* Star-like color */
+            margin: 25px 0;
+            line-height: 1.6;
+            padding: 10px;
+            border-left: 3px solid var(--color-secondary);
+            border-right: 3px solid var(--color-secondary);
+            border-radius: 10px;
+        }
+
+        .gratitude-core {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-top: 35px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 8px var(--color-primary);
+        }
+        .quote { 
+            font-style: italic; 
+            color: var(--color-secondary); 
+        }
+
+        /* Memory Game Styles */
+        .memory-game-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-gap: 15px;
+            margin-top: 30px;
+            width: 100%;
+            max-width: 600px; /* Adjust as needed */
+            perspective: 1000px; /* For 3D flip effect */
+        }
+
+        .memory-card {
+            width: 100%;
+            aspect-ratio: 3 / 4; /* Maintain card ratio */
+            border-radius: 15px;
+            background-color: transparent; /* Card itself is transparent */
+            cursor: pointer;
+            position: relative;
+            transform-style: preserve-3d;
+            
+            /* Initial glow effect + improved transition */
+            box-shadow: 0 0 5px rgba(255, 175, 204, 0.4);
+            animation: pulseGlow 2s infinite alternate ease-in-out;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease; /* ELASTIC BOUNCE */
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 5px var(--color-accent), 0 0 10px rgba(255, 175, 204, 0.4); }
+            100% { box-shadow: 0 0 15px var(--color-accent), 0 0 25px rgba(255, 175, 204, 0.7); }
+        }
+
+        /* Flip animation enhancements */
+        .memory-card.flipped {
+            transform: rotateY(180deg); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4); 
+            animation: none; /* Stop pulse glow when flipped */
+        }
+
+        /* No match shake effect with error glow */
+        .memory-card.shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            /* transform: translate3d(0, 0, 0); Ya no es necesario si shake no rota */
+            /* backface-visibility: hidden; Esto es clave, mantenerlo */
+            perspective: 1000px;
+        }
+
+        /* NEW: Error glow effect */
+        .memory-card.error-glow {
+            animation: errorGlow 0.6s forwards; /* Apply after shake, or during shake */
+        }
+        @keyframes errorGlow {
+            0% { box-shadow: 0 0 10px rgba(255, 175, 204, 0.7); }
+            50% { box-shadow: 0 0 25px var(--color-error-glow), 0 0 50px rgba(255, 77, 77, 0.5); }
+            100% { box-shadow: 0 0 10px rgba(255, 175, 204, 0.7); /* Return to normal glow */ }
+        }
+
+        @keyframes shake {
+            /* Solo afectan la posición, no la rotación */
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        
+        /* New matched effect */
+        .memory-card.matched {
+            pointer-events: none; /* Disable clicks on matched cards */
+            animation: cardMatchEffect 0.8s forwards; /* Apply the magic effect */
+            opacity: 0; /* Nueva línea: hace la carta invisible */
+            transition: opacity 0.8s ease-out; /* Transición para que se desvanezca suavemente */
+        }
+
+        @keyframes cardMatchEffect {
+            0% {
+                transform: scale(1) rotateY(180deg); /* Asegura que la carta empiece ya volteada */
+                opacity: 1;
+                box-shadow: 0 0 15px var(--color-match-glow), 0 0 30px rgba(162, 210, 255, 0.5);
+            }
+            50% {
+                transform: scale(1.2) rotateY(180deg); /* Bigger pop */
+                opacity: 1;
+                box-shadow: 0 0 60px var(--color-match-glow), 0 0 100px var(--color-secondary), inset 0 0 30px var(--color-accent); /* Intense glow */
+            }
+            100% {
+                transform: scale(1) rotateY(180deg); /* Mantiene la escala para que no se "encoga" el espacio */
+                opacity: 0; /* Asegura que termina invisible */
+                box-shadow: none;
+            }
+        }
+
+        .memory-card .front-face,
+        .memory-card .back-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 15px;
+            backface-visibility: hidden; /* Hide back face */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3em; /* Emoji size */
+            font-weight: bold; /* Make emojis bolder */
+        }
+
+        .memory-card .front-face {
+            background: linear-gradient(145deg, var(--color-primary), var(--color-secondary)); /* Gradient for front face */
+            transform: rotateY(180deg); /* Initially hidden */
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3); /* Deeper inner shadow */
+            color: #1a1a2e; /* Darker text for light background */
+            text-shadow: 0 0 10px rgba(0,0,0,0.2), 0 0 20px rgba(255,255,255,0.6); /* Emoji glow */
+        }
+
+        .memory-card .back-face {
+            background: linear-gradient(145deg, var(--color-card-back), var(--color-bg-light)); /* Gradient for back face */
+            color: var(--color-text-light);
+            font-size: 3.5em; /* Larger question mark */
+            font-family: 'Playfair Display', serif; /* A bit more elegant */
+            text-shadow: 0 0 8px var(--color-primary), 0 0 15px var(--color-accent); /* Stronger glow for '?' */
+            display: flex; /* Ensure centering works */
+            justify-content: center;
+            align-items: center;
+            border: 2px dashed rgba(255,255,255,0.1); /* Subtle dashed border */
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2); /* Inner shadow for depth */
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0wIDBoMjAwdi0yMDBoMjAwdi0yMDB6TTIzMS41IDMzOC4xQzI3NS45IDMyNC44IDMwMCAyODAuMiAzMDAgMjMxLjVTMjc1LjkgMTIzLjEgMjMxLjUgMTA5LjggMTQ5LjggMTU3LjMgMTQ5LjggMjMxLjVzNDEuNyA3NC4yIDgxLjcgMTA2LjZ6IiBmaWxsPSIjRkNFNkJEIiBvcGFjaXR5PSIwLjA1Ii8+CjxwYXRoIGQ9Ik0wIDHoMjAwdi0yMDBoMjAwdi0yMDB6TTIzMS41IDMzOC4xQzI3NS45IDMyNC44IDMwMCAyODAuMiAzMDAgMjMxLjVTMjc1LjkgMTIzLjEgMjMxLjUgMTA5LjggMTQ5LjggMTU3LjMgMTQ5LjggMjMxLjVzNDEuNyA3NC4yIDgxLjcgMTA2LjZ6IiBmaWxsPSIjRkZBRkNDIiBvcGFjaXR5PSIwLjA1Ii8+Cjwvc3ZnPg=='); /* Subtle star/dot pattern */
+            background-size: 30px;
+            background-repeat: repeat;
+        }
+
+        #matches-info {
+            font-size: 1.2em;
+            color: var(--color-accent);
+            margin-top: 20px;
+            text-shadow: 0 0 8px rgba(252,246,189,0.3);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: textFadeInUp 0.8s ease-out forwards;
+            animation-delay: 0.6s;
+        }
+
+
+        /* Game restart button / Go to home button */
+        #go-home-button { 
+            background-color: var(--color-accent);
+            color: var(--color-bg-dark);
+            border: none;
+            padding: 12px 25px;
+            font-size: 1em;
+            font-family: 'Nunito', sans-serif;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            opacity: 0; 
+            transform: translateY(20px);
+            animation: textFadeInUp 0.8s ease-out forwards;
+            animation-delay: 0.5s;
+        }
+
+        #go-home-button:hover { 
+            background-color: #fceea6;
+            transform: translateY(-3px) scale(1.03);
+        }
+
+
+        /* Keyframe Animations */
+        @keyframes textPopIn {
+            from { opacity: 0; transform: scale(0.8) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes textFadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes elementPopIn {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes sectionFadeIn {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes sectionFadeOut {
+            from { opacity: 1; transform: scale(1) translateY(0); }
+            to { opacity: 0; transform: scale(0.95) translateY(-20px); }
+        }
+
+        /* Victory Modal Styles */
+        .victory-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .victory-modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .victory-modal-content {
+            background-color: var(--color-card-bg);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(162, 210, 255, 0.5);
+            transform: translateY(-50px) scale(0.8);
+            opacity: 0;
+            animation: modalPopIn 0.5s forwards cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes modalPopIn {
+            0% { transform: translateY(-50px) scale(0.8); opacity: 0; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .victory-modal-content h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5em;
+            color: var(--color-primary);
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px var(--color-primary);
+        }
+
+        .victory-modal-content p {
+            font-size: 1.2em;
+            color: var(--color-text-light);
+            margin-bottom: 30px;
+        }
+
+        .victory-modal-content button {
+            background-color: var(--color-secondary);
+            color: var(--color-bg-dark);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-family: 'Nunito', sans-serif;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        }
+
+        .victory-modal-content button:hover {
+            background-color: var(--color-button-hover);
+            transform: translateY(-3px) scale(1.03);
+        }
+
+
+
+        /* Media Queries */
+        @media (max-width: 768px) {
+            .container { padding: 30px 25px; width: 95%; }
+            h1.mensaje-inicial { font-size: 2.8em; }
+            p.mensaje-inicial-secundario { font-size: 1.2em; }
+            #boton-audio { font-size: 1.1em; padding: 15px 30px; }
+            #agradecimiento h2, #seccion-medicina h2, #juego-memoria h2 { font-size: 2em; }
+            p { font-size: 1em; }
+            .memory-game-container {
+                grid-template-columns: repeat(3, 1fr); /* 3 columns on smaller screens */
+                grid-gap: 10px;
+                max-width: 450px;
+            }
+             .memory-card .front-face, .memory-card .back-face {
+                font-size: 2.5em; /* Adjust emoji size for smaller cards */
+            }
+            .memory-card .back-face {
+                font-size: 3em; /* Adjust '?' size */
+            }
+            .victory-modal-content { padding: 30px; }
+            .victory-modal-content h3 { font-size: 2em; }
+            .victory-modal-content p { font-size: 1.1em; }
+        }
+
+        @media (max-width: 480px) {
+            .container { padding: 25px 15px; }
+            h1.mensaje-inicial { font-size: 2em; }
+            p.mensaje-inicial-secundario { font-size: 1.1em; margin-bottom: 30px; }
+            #boton-audio { font-size: 1em; padding: 12px 25px; }
+            #agradecimiento h2, #seccion-medicina h2, #juego-memoria h2 { font-size: 1.7em; }
+            p { font-size: 0.95em; }
+            .next-button { padding: 12px 25px; font-size: 1em; }
+            .memory-game-container {
+                grid-template-columns: repeat(2, 1fr); /* 2 columns on very small screens */
+                grid-gap: 8px;
+                max-width: 300px;
+            }
+            .memory-card .front-face, .memory-card .back-face {
+                font-size: 2em; /* Adjust emoji size for very small cards */
+            }
+            .memory-card .back-face {
+                font-size: 2.5em; /* Adjust '?' size */
+            }
+            .victory-modal-content { padding: 20px; }
+            .victory-modal-content h3 { font-size: 1.7em; }
+            .victory-modal-content p { font-size: 1em; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particle-canvas"></canvas>
+    <div class="container">
+        <section id="bienvenida" class="active">
+            <h1 class="mensaje-inicial">¡Hola Mariagna!</h1>
+            <p class="mensaje-inicial-secundario">Creé esta nueva página para ti, espero te guste porque te mereces estas palabras.</p>
+            <div id="boton-audio-container">
+                <button id="boton-audio">🎶 Activa tu canción favorita</button>
+            </div>
+        </section>
+
+        <section id="agradecimiento" class="hidden">
+            <h2>Gracias por ser mi apoyo</h2>
+            <p class="gratitude-phrase">
+                Hubo momentos muy difíciles, cuando la depresión me tenía muy mal, y no veía la salida. Tú fuiste un apoyo fundamental, mi cable a tierra. Me ayudaste a salir adelante.
+            </p>
+            <p>No solo estuviste ahí, me diste la fuerza para seguir, para recordar que había cosas buenas y que podía sentirme bien de nuevo.</p>
+            <p>Es difícil poner en palabras lo mucho que valoro tu amistad y todo lo que hiciste por mí. Siempre voy a estar ahí para ti, como tú lo estuviste para mí.</p>
+            <p class="gratitude-core">Tu amistad es lo más valioso.</p>
+            <button class="next-button" data-target="seccion-medicina">Siguiente</button>
+        </section>
+
+        <section id="seccion-medicina" class="hidden">
+            <h2>Tu carrera en Medicina: ¡Qué orgullo!</h2>
+            <p>¿Sabes, Mariagna? Cuando escucho a la gente hablar del esfuerzo que requiere estudiar o conseguir metas, siempre pienso en ti y en todo lo que has logrado:</p>
+            <p class="quote"><strong>"Tengo una amiga que está haciendo un gran sacrificio para convertirse en la mejor doctora."</strong></p>
+            <p>Admiro muchísimo tu dedicación y lo fuerte que eres. Meterse a estudiar medicina es un gran reto, y tú lo estás haciendo genial. Me inspira verte. Mientras termino esto, me motivas a seguir.</p>
+            <p>Estoy súper emocionado por algo grande que se viene: ¡el día de tu graduación! Sé que estás trabajando durísimo para llegar hasta allí y quiero estar ahí contigo para celebrar ese día tan especial, cuando te conviertas en la doctora que vas a ser.</p>
+            <p>¡Siempre voy a estar para ti, Mariagna! Esto es solo el principio de muchas cosas buenas que vamos a compartir.</p>
+            <button class="next-button" data-target="juego-memoria">¡Juguemos un poco!</button>
+        </section>
+
+        <section id="juego-memoria" class="hidden">
+            <h2>¡Vamos a jugar!</h2>
+            <p>Encuentra las parejas de emojis.</p>
+            <div id="matches-info">Parejas encontradas: 0 / 6</div> <div class="memory-game-container">
+                </div>
+            <button id="go-home-button" class="hidden">Ir al inicio</button> 
+        </section>
+    </div>
+
+    <div id="victory-modal" class="victory-modal-overlay">
+        <div class="victory-modal-content">
+            <h3>¡Felicidades, Mariagna! 🎉</h3>
+            <p>¡Encontraste todas las parejas! Eres increíble en esto.</p>
+            <button id="close-victory-modal">¡Qué bien! Regresar al inicio</button>
+        </div>
+    </div>
+
+
+    <audio id="audio-iris" src="audio/iris.mp3" preload="auto"></audio> 
+    <audio id="audio-flip" src="audio/flip_sound.mp3" preload="auto"></audio>
+    <audio id="audio-match" src="audio/match_sound.mp3" preload="auto"></audio>
+    <audio id="audio-no-match" src="audio/no_match_sound.mp3" preload="auto"></audio>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const audioIris = document.getElementById('audio-iris');
+        const audioFlip = document.getElementById('audio-flip');
+        const audioMatch = document.getElementById('audio-match');
+        const audioNoMatch = document.getElementById('audio-no-match');
+
+        const sections = document.querySelectorAll('section');
+        const nextButtons = document.querySelectorAll('.next-button');
+        let currentSectionIndex = 0;
+
+        // Particle Background
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particlesArray;
+
+        // Particle class (logic for starry background)
+        class Particle {
+            constructor(x, y, size, color, weight) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.color = color;
+                this.weight = weight;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+            update() {
+                this.size -= 0.03; // Shrink
+                if (this.size < 0) {
+                    this.x = (Math.random() * canvas.width);
+                    this.y = (Math.random() * canvas.height); // Start from anywhere on screen
+                    this.size = (Math.random() * 2) + 1; // Reset size
+                    this.weight = (Math.random() * 0.5) + 0.2; // Reset weight
+                }
+                this.y += this.weight; // Move down
+                this.weight += 0.005; // Accelerate slightly
+
+                // Reappear from top if goes off screen
+                if (this.y > canvas.height + this.size) { // Check if completely off screen
+                    this.y = -this.size; // Reappear slightly above top
+                    this.x = (Math.random() * canvas.width);
+                    this.size = (Math.random() * 2) + 1;
+                    this.weight = (Math.random() * 0.5) + 0.2;
+                }
+            }
+        }
+
+        function initParticles() {
+            particlesArray = [];
+            const numberOfParticles = (canvas.width * canvas.height) / 9000;
+            for (let i = 0; i < numberOfParticles; i++) {
+                const size = (Math.random() * 2) + 1;
+                const x = (Math.random() * canvas.width);
+                const y = (Math.random() * canvas.height);
+                const color = `rgba(${Math.random()*100 + 155}, ${Math.random()*100 + 155}, 255, ${Math.random()*0.5 + 0.3})`;
+                const weight = (Math.random() * 0.5) + 0.2;
+                particlesArray.push(new Particle(x, y, size, color, weight));
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+            }
+            requestAnimationFrame(animateParticles);
+        }
+
+        initParticles();
+        animateParticles();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initParticles();
+        });
+
+
+        // Section transition logic
+        function showSection(index) {
+            if (index === currentSectionIndex) return; // Prevent showing same section
+
+            const currentSection = sections[currentSectionIndex];
+            const nextSection = sections[index];
+
+            // 1. Start fade-out animation for current section
+            currentSection.style.animation = 'sectionFadeOut 0.5s ease-in forwards';
+            
+            // Get all animatable elements in the CURRENT section and reset their opacity
+            const currentSectionElements = currentSection.querySelectorAll('h1, h2, p, .gratitude-phrase, .gratitude-core, .quote, .next-button, #boton-audio-container, .memory-game-container, #go-home-button, #matches-info'); // Updated ID
+            currentSectionElements.forEach(el => {
+                el.style.animation = 'none'; // Clear any ongoing animations
+                el.style.opacity = '0'; // Reset opacity for fade-out effect
+            });
+
+
+            // 2. After fade-out, hide current section completely and prepare next one
+            setTimeout(() => {
+                currentSection.classList.remove('active');
+                currentSection.classList.add('hidden'); // Fully hide after animation
+
+                nextSection.classList.remove('hidden'); // Make it display:flex, but still invisible
+                nextSection.style.animation = 'sectionFadeIn 0.8s ease-out forwards'; // Animate next section
+                nextSection.classList.add('active'); // Mark as active
+
+                // Get all animatable elements in the NEXT section and apply staggered animations
+                const nextSectionElements = nextSection.querySelectorAll('h1, h2, p, .gratitude-phrase, .gratitude-core, .quote, .next-button, #boton-audio-container, .memory-game-container, #go-home-button, #matches-info'); // Updated ID
+                nextSectionElements.forEach((el, i) => {
+                    el.style.opacity = '0'; // Ensure it starts hidden
+                    if (el.tagName === 'H1' || el.tagName === 'H2') {
+                        el.style.animation = `textPopIn 0.8s ease-out ${0.2 + (i * 0.1)}s forwards`;
+                    } else if (el.classList.contains('next-button')) {
+                         el.style.animation = `elementPopIn 0.8s ease-out ${0.2 + (i * 0.1) + 0.5}s forwards`; // Buttons slightly later
+                    } else if (el.id === 'boton-audio-container') {
+                        el.style.animation = `elementPopIn 1s ease-out 1.5s forwards`; // Specific delay for audio button
+                    } else if (el.classList.contains('memory-game-container')) {
+                         el.style.animation = `elementPopIn 1s ease-out 0.8s forwards`; // Game container animation
+                    } else if (el.id === 'go-home-button' || el.id === 'matches-info') { // Updated ID for button and info
+                         el.style.animation = `textFadeInUp 0.8s ease-out 1.2s forwards`; // Button/Info animation
+                    }
+                    else {
+                        el.style.animation = `textFadeInUp 0.8s ease-out ${0.3 + (i * 0.1)}s forwards`;
+                    }
+                });
+                
+            }, 500); // Duration of sectionFadeOut
+
+            currentSectionIndex = index;
+
+            // If navigating to the game section, initialize the game
+            if (nextSection.id === 'juego-memoria') {
+                setTimeout(initializeMemoryGame, 1000); // Give time for section to animate in
+            }
+        }
+        
+        // Initial section display (Bienvenida) - needs to ensure its elements animate
+        const bienvenidaElements = sections[0].querySelectorAll('h1, p, #boton-audio-container');
+        bienvenidaElements.forEach((el, i) => {
+            el.style.opacity = '0'; // Start hidden
+            if (el.tagName === 'H1') {
+                el.style.animation = `textPopIn 1s ease-out 0.5s forwards`;
+            } else if (el.tagName === 'P') {
+                el.style.animation = `textFadeInUp 1s ease-out 1s forwards`;
+            } else if (el.id === 'boton-audio-container') {
+                el.style.animation = `elementPopIn 1s ease-out 1.5s forwards`;
+            }
+        });
+
+
+        // Audio Button
+        const botonAudio = document.getElementById('boton-audio');
+        botonAudio.addEventListener('click', () => {
+            audioIris.play()
+                .then(() => {
+                    showSection(1); // Show "agradecimiento"
+                })
+                .catch(error => {
+                    console.error("Error al intentar reproducir el audio:", error);
+                    alert("¡Hola Mariagna! Tu navegador podría bloquear la reproducción automática inicial. Haz clic en 'OK' y luego en CUALQUIER PARTE de la página para que la música empiece.");
+                    
+                    const playOnClick = () => {
+                        audioIris.play().then(() => {
+                            showSection(1);
+                        }).catch(err => console.error("Fallback audio play failed:", err));
+                        document.body.removeEventListener('click', playOnClick); 
+                    };
+                    document.body.addEventListener('click', playOnClick, { once: true });
+                });
+        });
+
+        // Next Buttons
+        nextButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.dataset.target;
+                if (targetId === 'seccion-medicina') {
+                    showSection(2); // Show "seccion-medicina"
+                } else if (targetId === 'juego-memoria') {
+                    showSection(3); // Show "juego-memoria"
+                } 
+            });
+        });
+
+
+        // Memory Game Logic
+        const gameContainer = document.querySelector('.memory-game-container');
+        const goHomeButton = document.getElementById('go-home-button');
+        const matchesInfo = document.getElementById('matches-info'); 
+        let hasFlippedCard = false;
+        let lockBoard = false; // Controls clicks on ALL cards
+        let firstCard, secondCard;
+        let matchedPairs = 0;
+        const totalPairs = 6; 
+
+        const emojis = ['💖', '🌟', '👩‍⚕️', '🎉', '🧠', '🩺', '💖', '🌟', '👩‍⚕️', '🎉', '🧠', '🩺']; 
+
+        function updateMatchesInfo() {
+            matchesInfo.textContent = `Parejas encontradas: ${matchedPairs} / ${totalPairs}`;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function createCard(emoji) {
+            const card = document.createElement('div');
+            card.classList.add('memory-card');
+            card.dataset.framework = emoji; 
+            card.innerHTML = `
+                <div class="front-face">${emoji}</div>
+                <div class="back-face">?</div>
+            `;
+            card.addEventListener('click', flipCard); 
+            return card;
+        }
+
+        function initializeMemoryGame() {
+            gameContainer.innerHTML = ''; // Clear existing cards
+            matchedPairs = 0;
+            updateMatchesInfo(); // Reset info on game start
+            const shuffledEmojis = shuffle([...emojis]); 
+            shuffledEmojis.forEach(emoji => {
+                gameContainer.appendChild(createCard(emoji));
+            });
+            goHomeButton.classList.remove('hidden'); 
+            resetBoard(); 
+        }
+
+        function flipCard() {
+            // 1. Guardias: Si el tablero está bloqueado, o la carta ya está volteada/emparejada, no hagas nada.
+            if (lockBoard) return;
+            if (this === firstCard) return; // Evita doble clic en la misma carta
+            // IMPORTANTE: Si ya está matched, no permitas flip. La clase 'matched' ya la hace pointer-events: none;
+            if (this.classList.contains('flipped')) return; 
+
+            // 2. Voltear la carta: Siempre se voltea al hacer clic (añade la clase 'flipped').
+            this.classList.add('flipped');
+            audioFlip.currentTime = 0; // Reinicia el sonido de volteo
+            audioFlip.play();
+
+            if (!hasFlippedCard) {
+                // Es la primera carta
+                hasFlippedCard = true;
+                firstCard = this;
+                return; // Espera el segundo clic
+            }
+
+            // Es la segunda carta
+            secondCard = this;
+            
+            // Bloquea el tablero INMEDIATAMENTE después de la segunda carta para evitar más clics
+            lockBoard = true; 
+
+            // Pequeño retardo ANTES de verificar el match
+            // Esto permite que la animación de volteo de la segunda carta se vea completamente.
+            setTimeout(() => {
+                checkForMatch();
+            }, 600); // Duración de la transición flip de la carta (0.6s)
+        }
+
+        function checkForMatch() {
+            let isMatch = firstCard.dataset.framework === secondCard.dataset.framework;
+
+            if (isMatch) {
+                disableCards();
+            } else {
+                unflipCards();
+            }
+        }
+
+        function disableCards() {
+            audioMatch.currentTime = 0; 
+            audioMatch.play();
+
+            // Aplica la clase 'matched' para la animación de desaparición y para hacerla invisible
+            firstCard.classList.add('matched');
+            secondCard.classList.add('matched');
+
+            // Eliminar listeners de clic inmediatamente para evitar interacciones durante la animación
+            firstCard.removeEventListener('click', flipCard);
+            secondCard.removeEventListener('click', flipCard);
+            
+            // El resto de la lógica de remoción del DOM ya no es necesaria
+            // porque la carta ahora solo se vuelve invisible con opacity: 0;
+            
+            matchedPairs++;
+            updateMatchesInfo();
+
+            if (matchedPairs === totalPairs) {
+                setTimeout(() => {
+                    showVictoryModal(); 
+                }, 500); 
+            }
+            
+            // Restablece el tablero después de la animación de "matched" (0.8s)
+            setTimeout(() => {
+                resetBoard(); 
+            }, 800); // Ajustado al tiempo de animación de cardMatchEffect
+        }
+
+        function unflipCards() {
+            audioNoMatch.currentTime = 0; 
+            audioNoMatch.play();
+
+            // Aplica shake y error glow
+            firstCard.classList.add('shake', 'error-glow');
+            secondCard.classList.add('shake', 'error-glow');
+
+            // Deja que las animaciones de shake/error-glow se reproduzcan (0.5s y 0.6s)
+            // y luego voltea las cartas de nuevo.
+            setTimeout(() => {
+                // Quita las clases de animación
+                firstCard.classList.remove('shake', 'error-glow');
+                secondCard.classList.remove('shake', 'error-glow');
+                
+                // Ahora, voltea las cartas hacia atrás
+                firstCard.classList.remove('flipped');
+                secondCard.classList.remove('flipped');
+                
+                // RESTABLECE EL TABLERO CASI DE INMEDIATO DESPUÉS DE QUE SE VOLTEAN
+                // Esto hace que la pausa sea mínima.
+                setTimeout(() => {
+                    resetBoard(); 
+                }, 100); // Pequeña pausa de 100ms después de voltear para permitir la re-interacción
+            }, 1000); // Pausa de 1 segundo para que la animación de "shake" y "error-glow" sea visible
+        }
+
+        function resetBoard() {
+            [hasFlippedCard, lockBoard] = [false, false];
+            [firstCard, secondCard] = [null, null];
+        }
+        
+        goHomeButton.addEventListener('click', () => {
+            audioIris.pause(); 
+            audioIris.currentTime = 0; 
+            showSection(0); 
+        });
+
+        // --- Victory Modal Logic ---
+        const victoryModal = document.getElementById('victory-modal');
+        const closeVictoryModalButton = document.getElementById('close-victory-modal');
+
+        function showVictoryModal() {
+            victoryModal.classList.add('show');
+            gameContainer.innerHTML = ''; 
+        }
+
+        closeVictoryModalButton.addEventListener('click', () => {
+            victoryModal.classList.remove('show');
+            audioIris.pause(); 
+            audioIris.currentTime = 0; 
+            showSection(0); 
+        });
+        // --- END Victory Modal Logic ---
+
+    });
+    </script>
+</body>
+</html>
